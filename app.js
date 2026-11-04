@@ -4,8 +4,8 @@ const LS_KEY="biharswad-hisaab-v1";
 const CH={amazon_fba:"Amazon FBA",easy_ship:"Easy Ship",website:"वेबसाइट"};
 const DEFAULT_SETTINGS={adPer:60,nextPrice:289,lastBackup:0,products:[
   {id:"p250",name:"ठेकुआ 250g (Pack of 1)",code:"250g, सिंगल, single, पैक ऑफ 1, pack of 1",price:260,raw:57,pouch:18,box:10,tape:2,courier:68,fee:0},
-  {id:"p2",name:"ठेकुआ 500g (Pack of 2)",code:"500g, 500 ग्राम, आधा किलो, पैक ऑफ 2, pack of 2, 2 वाला, डबल, double",price:449,raw:114,pouch:36,box:10,tape:2,courier:68,fee:0},
-  {id:"p3",name:"ठेकुआ 750g (Pack of 3)",code:"750g, 750 ग्राम, पैक ऑफ 3, pack of 3, 3 वाला",price:699,raw:171,pouch:54,box:10,tape:2,courier:68,fee:0}
+  {id:"p2",name:"ठेकुआ 500g (Pack of 2)",code:"500g, 500 ग्राम, आधा किलो, पैक ऑफ 2, pack of 2, 2 वाला, डबल, double",price:449,raw:114,pouch:36,box:10,tape:2,courier:88,fee:0},
+  {id:"p3",name:"ठेकुआ 750g (Pack of 3)",code:"750g, 750 ग्राम, पैक ऑफ 3, pack of 3, 3 वाला",price:699,raw:171,pouch:54,box:10,tape:2,courier:133,fee:0}
  ],loans:[]};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let S={settings:clone(DEFAULT_SETTINGS),months:{}};
