@@ -2,7 +2,11 @@
 "use strict";
 const LS_KEY="biharswad-hisaab-v1";
 const CH={amazon_fba:"Amazon FBA",easy_ship:"Easy Ship",website:"वेबसाइट"};
-const DEFAULT_SETTINGS={adPer:60,nextPrice:289,lastBackup:0,products:[{id:"p250",name:"ठेकुआ 250g (Pack of 1)",code:"250g",price:259,raw:57,pouch:18,box:10,tape:2,courier:68,fee:0}],loans:[]};
+const DEFAULT_SETTINGS={adPer:60,nextPrice:289,lastBackup:0,products:[
+  {id:"p250",name:"ठेकुआ 250g (Pack of 1)",code:"250g, सिंगल, single, पैक ऑफ 1, pack of 1",price:260,raw:57,pouch:18,box:10,tape:2,courier:68,fee:0},
+  {id:"p2",name:"ठेकुआ Pack of 2 (2×250g)",code:"पैक ऑफ 2, pack of 2, 2 वाला, डबल, double",price:449,raw:114,pouch:36,box:10,tape:2,courier:68,fee:0},
+  {id:"p3",name:"ठेकुआ Pack of 3 (3×250g)",code:"पैक ऑफ 3, pack of 3, 3 वाला",price:699,raw:171,pouch:54,box:10,tape:2,courier:68,fee:0}
+ ],loans:[]};
 const clone=o=>JSON.parse(JSON.stringify(o));
 let S={settings:clone(DEFAULT_SETTINGS),months:{}};
 
@@ -37,13 +41,14 @@ function saveMonth(){saveLocal();render()}
 function stats(sales,exp){
   let orders=0,rev=0,cost=0,adsEst=0;
   sales.forEach(s=>{orders+=s.qty;rev+=s.qty*s.price;cost+=s.qty*s.cost;adsEst+=s.qty*s.adPer});
-  let adsDep=0,other=0;
-  exp.forEach(e=>{if(e.kind==="ads")adsDep+=e.amount;else other+=e.amount});
-  return {orders,rev,cost,adsEst,adsDep,other,profit:rev-cost-adsEst-other,profitDep:rev-cost-adsDep-other};
+  let adsDep=0,adsReal=0,other=0;
+  exp.forEach(e=>{if(e.kind==="ads")adsDep+=e.amount;else if(e.kind==="adspend")adsReal+=e.amount;else other+=e.amount});
+  const adsUsed=adsReal>0?adsReal:adsEst;
+  return {orders,rev,cost,adsEst,adsDep,adsReal,adsUsed,other,profit:rev-cost-adsUsed-other,profitDep:rev-cost-adsDep-other};
 }
 function dayStats(d){const m=S.months[d.slice(0,7)]||{sales:[],exp:[]};return stats(m.sales.filter(s=>s.date===d),m.exp.filter(e=>e.date===d))}
 function monthStats(k){const m=S.months[k]||{sales:[],exp:[]};return stats(m.sales,m.exp)}
-function wallet(){let dep=0,used=0;Object.values(S.months).forEach(m=>{m.exp.forEach(e=>{if(e.kind==="ads")dep+=e.amount});m.sales.forEach(s=>{used+=s.qty*s.adPer})});return {dep,used,left:dep-used}}
+function wallet(){let dep=0,used=0;Object.keys(S.months).forEach(k=>{const m=S.months[k];m.exp.forEach(e=>{if(e.kind==="ads")dep+=e.amount});used+=stats(m.sales,m.exp).adsUsed});return {dep,used,left:dep-used}}
 
 /* ---------- entries ---------- */
 function addSale(date,pid,qty,channel){
@@ -54,7 +59,7 @@ function addSale(date,pid,qty,channel){
 }
 function addExp(date,kind,amount,note){
   if(!(amount>0))return false;const k=date.slice(0,7);
-  month(k).exp.push({id:uid(),date,kind:kind==="ads"?"ads":"other",amount:Math.round(amount),note:String(note||"").slice(0,120),at:Date.now()});
+  month(k).exp.push({id:uid(),date,kind:["ads","adspend"].includes(kind)?kind:"other",amount:Math.round(amount),note:String(note||"").slice(0,120),at:Date.now()});
   return k;
 }
 function delEntry(k,id){const m=S.months[k];if(!m)return;m.sales=m.sales.filter(s=>s.id!==id);m.exp=m.exp.filter(e=>e.id!==id);saveMonth()}
@@ -79,18 +84,19 @@ function renderToday(){
   const rows=[...m.sales.filter(s=>s.date===d).map(s=>({t:"s",o:s})),...m.exp.filter(e=>e.date===d).map(e=>({t:"e",o:e}))].sort((a,b)=>b.o.at-a.o.at);
   $("dayList").innerHTML=rows.length?rows.map(r=>{
     if(r.t==="s"){const s=r.o;return `<div class="item"><div class="main"><div class="t">${esc(s.name)} × ${s.qty}</div><div class="s"><span class="tag">${esc(CH[s.channel]||s.channel)}</span>₹${s.price} का · लागत ₹${s.cost}+Ads ₹${s.adPer}</div></div><span class="amt">${rs(s.qty*s.price)}</span><button class="del" data-act="del" data-k="${k}" data-id="${s.id}">हटाएँ</button></div>`}
-    const e=r.o;return `<div class="item"><div class="main"><div class="t">${e.kind==="ads"?"Ads में डाला":"खर्च"}${e.note?" · "+esc(e.note):""}</div><div class="s"><span class="tag ${e.kind==="ads"?"ads":"bad"}">${e.kind==="ads"?"Ads":"खर्च"}</span></div></div><span class="amt neg">${rs(-e.amount)}</span><button class="del" data-act="del" data-k="${k}" data-id="${e.id}">हटाएँ</button></div>`;
-  }).join("")+`<p class="note">*मुनाफ़ा = बिक्री − पैक की लागत − Ads (₹${num(S.settings.adPer)}/ऑर्डर) − दूसरे खर्च</p>`:`<p class="empty">इस दिन की कोई एंट्री नहीं है। ऊपर से बिक्री जोड़ें।</p>`;
+    const e=r.o;const lab=e.kind==="ads"?"Ads वॉलेट में डाला":e.kind==="adspend"?"Ads का असली खर्च":"खर्च";return `<div class="item"><div class="main"><div class="t">${lab}${e.note?" · "+esc(e.note):""}</div><div class="s"><span class="tag ${e.kind==="other"?"bad":"ads"}">${e.kind==="other"?"खर्च":"Ads"}</span></div></div><span class="amt neg">${rs(-e.amount)}</span><button class="del" data-act="del" data-k="${k}" data-id="${e.id}">हटाएँ</button></div>`;
+  }).join("")+`<p class="note">*मुनाफ़ा = बिक्री − पैक की लागत − Ads − दूसरे खर्च (Ads का असली खर्च डाला हो तो वही, वरना ₹${num(S.settings.adPer)}/ऑर्डर)</p>`:`<p class="empty">इस दिन की कोई एंट्री नहीं है। ऊपर से बिक्री जोड़ें।</p>`;
 }
 function renderMonth(){
   const k=$("mSel").value||today().slice(0,7);
   const st=monthStats(k);
   $("mTiles").innerHTML=tile("शुद्ध मुनाफ़ा · "+niceMonth(k),rs(st.profit),"hero"+(st.profit<0?" loss":""))+tile("ऑर्डर",st.orders)+tile("बिक्री",rs(st.rev))+tile("प्रति ऑर्डर",st.orders?rs(st.profit/st.orders):"—");
-  $("mMath").innerHTML=`<span>कुल बिक्री</span><span>${rs(st.rev)}</span><span>पैक की लागत (माल, पैकिंग, कूरियर)</span><span class="neg">${rs(-st.cost)}</span><span>Ads (₹${num(S.settings.adPer)}/ऑर्डर)</span><span class="neg">${rs(-st.adsEst)}</span><span>दूसरे खर्च</span><span class="neg">${rs(-st.other)}</span><span class="tot">शुद्ध मुनाफ़ा</span><span class="tot ${st.profit<0?"neg":"pos"}">${rs(st.profit)}</span>`;
+  $("mMath").innerHTML=`<span>कुल बिक्री</span><span>${rs(st.rev)}</span><span>पैक की लागत (माल, पैकिंग, कूरियर)</span><span class="neg">${rs(-st.cost)}</span><span>${st.adsReal>0?"Ads (Amazon का असली खर्च)":"Ads (₹"+num(S.settings.adPer)+"/ऑर्डर अंदाज़ा)"}</span><span class="neg">${rs(-st.adsUsed)}</span><span>दूसरे खर्च</span><span class="neg">${rs(-st.other)}</span><span class="tot">शुद्ध मुनाफ़ा</span><span class="tot ${st.profit<0?"neg":"pos"}">${rs(st.profit)}</span>`;
   const w=wallet();let note="";
-  if(st.adsDep>0)note+=`इस महीने Ads में ${rs(st.adsDep)} डाले। अगर ये पूरा पैसा इसी महीने खर्च मानें तो मुनाफ़ा ${rs(st.profitDep)} होगा`+(st.orders?`, और असली Ads खर्च ${rs(st.adsDep/st.orders)} प्रति ऑर्डर।`:"।")+" ";
-  if(w.dep>0)note+=`Ads वॉलेट: अब तक ${rs(w.dep)} डाले, ₹${num(S.settings.adPer)}/ऑर्डर के हिसाब से ${rs(w.used)} लगे, यानी लगभग ${rs(w.left)} बचे होने चाहिए। Amazon में असली बैलेंस से मिला लें।`;
-  else note+="Ads में डाला पैसा \"आज\" वाले पेज से जोड़ें, तो यहाँ बचा बैलेंस दिखेगा।";
+  if(st.adsReal>0&&st.orders)note+=`Ads का असली खर्च ${rs(st.adsReal)} = ${rs(st.adsReal/st.orders)} प्रति ऑर्डर (आपका अंदाज़ा ₹${num(S.settings.adPer)})। `;
+  if(st.adsDep>0&&!st.adsReal)note+=`इस महीने Ads में ${rs(st.adsDep)} डाले। अगर ये पूरा पैसा इसी महीने खर्च मानें तो मुनाफ़ा ${rs(st.profitDep)} होगा`+(st.orders?`, और असली Ads खर्च ${rs(st.adsDep/st.orders)} प्रति ऑर्डर।`:"।")+" ";
+  if(w.dep>0)note+=`Ads वॉलेट: अब तक ${rs(w.dep)} डाले, ${rs(w.used)} खर्च हुए, यानी लगभग ${rs(w.left)} बचे होने चाहिए। Amazon में असली बैलेंस से मिला लें।`;
+  else if(!st.adsReal) note+="Ads में डाला पैसा \"आज\" वाले पेज से जोड़ें, तो यहाँ बचा बैलेंस दिखेगा।";
   $("mAdsNote").textContent=note;
   const [y,mo]=k.split("-").map(Number);const days=new Date(y,mo,0).getDate();
   const m=S.months[k]||{sales:[],exp:[]};const per=new Array(days).fill(0);
@@ -98,9 +104,9 @@ function renderMonth(){
   const mx=Math.max(...per);const td=today();
   $("mBars").innerHTML=(mx?`<span class="maxl">${mx}</span>`:"")+per.map((v,i)=>{const ds=k+"-"+pad(i+1);return `<div class="bar ${v?"":"zero"} ${ds===td?"today":""}" style="height:${mx?Math.max(4,v/mx*100):0}%" title="${i+1}: ${v} ऑर्डर"></div>`}).join("");
   $("mAxis").innerHTML=`<span>1</span><span>${Math.ceil(days/2)}</span><span>${days}</span>`;
-  const by={};m.sales.forEach(s=>{const b=by[s.name]||(by[s.name]={q:0,r:0,p:0});b.q+=s.qty;b.r+=s.qty*s.price;b.p+=s.qty*(s.price-s.cost-s.adPer)});
+  const by={};m.sales.forEach(s=>{const b=by[s.name]||(by[s.name]={q:0,r:0,p:0});b.q+=s.qty;b.r+=s.qty*s.price;b.p+=s.qty*(s.price-s.cost)});
   const names=Object.keys(by);
-  $("mProd").innerHTML=names.length?`<table><thead><tr><th>पैक</th><th>बिके</th><th>बिक्री</th><th>मुनाफ़ा</th></tr></thead><tbody>${names.map(n=>`<tr><td>${esc(n)}</td><td>${by[n].q}</td><td>${rs(by[n].r)}</td><td class="${by[n].p<0?"neg":""}">${rs(by[n].p)}</td></tr>`).join("")}</tbody></table>`:`<p class="empty">इस महीने अभी कोई बिक्री नहीं जुड़ी।</p>`;
+  $("mProd").innerHTML=names.length?`<table><thead><tr><th>पैक</th><th>बिके</th><th>बिक्री</th><th>बचत (Ads से पहले)</th></tr></thead><tbody>${names.map(n=>`<tr><td>${esc(n)}</td><td>${by[n].q}</td><td>${rs(by[n].r)}</td><td class="${by[n].p<0?"neg":""}">${rs(by[n].p)}</td></tr>`).join("")}</tbody></table>`:`<p class="empty">इस महीने अभी कोई बिक्री नहीं जुड़ी।</p>`;
 }
 function renderLoans(){
   const L=[...S.settings.loans].sort((a,b)=>b.rate-a.rate);
@@ -122,6 +128,7 @@ function renderSetup(){
     </div>
     <div class="grid3">${f(p,"price","बिक्री दाम ₹")}${f(p,"raw","कच्चा माल ₹")}${f(p,"pouch","पाउच ₹")}${f(p,"box","बॉक्स ₹")}${f(p,"tape","टेप/लेबल ₹")}${f(p,"courier","कूरियर/डिलीवरी ₹")}${f(p,"fee","Amazon कमीशन ₹")}</div>
     <div class="math"><span>लागत (बिना Ads)</span><span>${rs(c)}</span><span>Ads के साथ लागत</span><span>${rs(c+ap)}</span><span>मुनाफ़ा, ऑर्गेनिक ऑर्डर</span><span class="${o<0?"neg":"pos"}">${rs(o)}</span><span class="tot">मुनाफ़ा, Ads वाला ऑर्डर</span><span class="tot ${a<0?"neg":"pos"}">${rs(a)}</span></div>
+    <button class="ghost" data-act="recalc" data-id="${p.id}" style="align-self:flex-start">इस पैक की पुरानी एंट्री भी इसी लागत से अपडेट करें</button>
     ${S.settings.products.length>1?`<button class="del" data-act="delProd" data-id="${p.id}" style="align-self:flex-start">ये पैक हटाएँ</button>`:""}
   </div>`}).join("");
   const lb=num(S.settings.lastBackup);
@@ -134,8 +141,7 @@ function report(k){
   const m=S.months[k]||{sales:[],exp:[]};
   const by={};m.sales.forEach(s=>{const b=by[s.name]||(by[s.name]={q:0,r:0});b.q+=s.qty;b.r+=s.qty*s.price});
   let t=`Bihar Swad — ${niceMonth(k)} का हिसाब\n`;
-  t+=`ऑर्डर: ${st.orders}\nबिक्री: ${rs(st.rev)}\nपैक की लागत: ${rs(st.cost)}\nAds (₹${num(S.settings.adPer)}/ऑर्डर अंदाज़ा): ${rs(st.adsEst)}\nइस महीने Ads में डाले: ${rs(st.adsDep)}\nदूसरे खर्च: ${rs(st.other)}\nशुद्ध मुनाफ़ा (₹${num(S.settings.adPer)}/ऑर्डर Ads मानकर): ${rs(st.profit)}\n`;
-  if(st.adsDep>0)t+=`शुद्ध मुनाफ़ा (पूरा डिपॉज़िट खर्च मानकर): ${rs(st.profitDep)}\n`;
+  t+=`ऑर्डर: ${st.orders}\nबिक्री: ${rs(st.rev)}\nपैक की लागत: ${rs(st.cost)}\nAds खर्च${st.adsReal>0?" (Amazon असली)":" (₹"+num(S.settings.adPer)+"/ऑर्डर अंदाज़ा)"}: ${rs(st.adsUsed)}\nइस महीने Ads वॉलेट में डाले: ${rs(st.adsDep)}\nदूसरे खर्च: ${rs(st.other)}\nशुद्ध मुनाफ़ा: ${rs(st.profit)}\n`;
   t+=`Ads वॉलेट (अंदाज़ा): डाले ${rs(w.dep)}, लगे ${rs(w.used)}, बचे ${rs(w.left)}\n`;
   Object.keys(by).forEach(n=>{t+=`- ${n}: ${by[n].q} बिके, ${rs(by[n].r)}\n`});
   t+=`\nअभी के पैक:\n`;S.settings.products.forEach(p=>{t+=`- ${p.name}: दाम ₹${num(p.price)}, लागत बिना Ads ₹${pcost(p)} (माल ${num(p.raw)}, पाउच ${num(p.pouch)}, बॉक्स ${num(p.box)}, टेप ${num(p.tape)}, कूरियर ${num(p.courier)}, कमीशन ${num(p.fee)})\n`});
@@ -155,6 +161,8 @@ function normText(t){
   return t;
 }
 const normCode=c=>normText(String(c||"")).replace(/\s+/g,"");
+const aliases=p=>String(p.code||"").split(/[,;]/).map(a=>a.trim()).filter(Boolean).map(a=>({raw:normText(a),flat:normCode(a)})).filter(a=>a.flat);
+const looseRe=a=>new RegExp(a.flat.split("").map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("\\s*"));
 const ADS_RE=/(ads?\b|ऐड|एड|ऐड्स|एड्स|विज्ञापन|प्रमोशन|promotion|sponsored|campaign)/;
 const EXP_RE=/(खर्च|खर्चा|kharch|kharcha|दिया|दिए|payment|भुगतान)/;
 function parseEntry(text){
@@ -162,7 +170,8 @@ function parseEntry(text){
   const now=new Date();let date=today();
   if(/(^|\s)(परसों|parso)(\s|$)/.test(base))date=ymd(new Date(now.getTime()-2*864e5));
   else if(/(^|\s)(कल|kal|yesterday)(\s|$)/.test(base))date=ymd(new Date(now.getTime()-864e5));
-  const prods=S.settings.products.map(p=>({p,code:normCode(p.code)})).filter(x=>x.code);
+  const prods=[];S.settings.products.forEach(p=>aliases(p).forEach(a=>prods.push({p,a})));
+  prods.sort((x,y)=>y.a.flat.length-x.a.flat.length); // लंबा नाम पहले मिलाओ
   const segs=base.split(/[,।\n]|\s(?:और|aur|and|तथा)\s/).map(s=>s.trim()).filter(Boolean);
   const sales=[],exps=[],unclear=[];
   segs.forEach(seg=>{
@@ -174,18 +183,16 @@ function parseEntry(text){
       return;
     }
     let hit=null;
-    prods.forEach(x=>{if(!hit&&flat.includes(x.code))hit=x});
+    prods.forEach(x=>{if(!hit&&flat.includes(x.a.flat))hit=x});
     let rest=seg;
-    if(hit){
-      // बोलने वाले नाम का हिस्सा हटाओ ताकि 250 जैसी संख्या गिनती न बने
-      const codeNums=(hit.code.match(/\d+/g)||[]);codeNums.forEach(n=>{rest=rest.replace(new RegExp(n+"\\s*g?"),"")});
-    }else if(S.settings.products.length===1){hit={p:S.settings.products[0]};}
+    if(hit){rest=rest.replace(looseRe(hit.a)," ");} // बोलने वाला नाम हटाओ ताकि उसकी संख्या गिनती न बने
+    else if(S.settings.products.length===1){hit={p:S.settings.products[0]};}
+    const chOf=t=>/(website|वेबसाइट|वेब|shopify|साइट)/.test(t)?"website":/(easy|ईज़ी|ईजी|इजी|घर से|ghar se)/.test(t)?"easy_ship":/(fba|एफबीए)/.test(t)?"amazon_fba":null;
     const qn=(rest.match(/\d+/g)||[]).map(Number).filter(n=>n>0&&n<1000);
+    if(!qn.length&&chOf(seg)&&sales.length){sales[sales.length-1].channel=chOf(seg);return}
     if(!qn.length){if(/(बिक|बिके|बिका|sold|bika|bike|order|ऑर्डर|आर्डर)/.test(seg)||hit&&prods.length)unclear.push(seg);return}
     if(!hit){unclear.push(seg);return}
-    let channel="amazon_fba";
-    if(/(website|वेबसाइट|वेब|shopify|साइट)/.test(seg))channel="website";
-    else if(/(easy|ईज़ी|ईजी|इजी|घर से|ghar se)/.test(seg))channel="easy_ship";
+    const channel=chOf(seg)||$("sChan").value||"easy_ship";
     sales.push({pid:hit.p.id,qty:qn[0],channel,date});
   });
   return {sales,exps,unclear};
@@ -211,6 +218,21 @@ function doSave(){
   pending=null;saveMonth();$("aiOut").innerHTML="";$("aiText").value="";toast("सेव हो गया");
 }
 
+/* ---------- माइक: बोलकर लिखना (Chrome की आवाज़ पहचान, इंटरनेट चाहिए) ---------- */
+let rec=null,recOn=false;
+function startMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){toast("इस फोन के ब्राउज़र में बोलकर लिखना नहीं चलता, Chrome में खोलें");return}
+  if(recOn&&rec){rec.stop();return}
+  rec=new SR();rec.lang="hi-IN";rec.interimResults=true;rec.continuous=false;
+  const box=$("aiText"),before=box.value?box.value.trim()+" ":"";const btn=$("micBtn");
+  rec.onstart=()=>{recOn=true;btn.classList.add("on");btn.textContent="🔴 सुन रहा हूँ… (रोकने के लिए दबाएँ)"};
+  rec.onresult=ev=>{let t="";for(let i=0;i<ev.results.length;i++)t+=ev.results[i][0].transcript;box.value=before+t};
+  rec.onerror=ev=>{toast(ev.error==="not-allowed"?"माइक की अनुमति दें (ब्राउज़र सेटिंग में)":ev.error==="network"?"बोलकर लिखने के लिए इंटरनेट चाहिए":"आवाज़ समझ नहीं आई, फिर बोलें")};
+  rec.onend=()=>{recOn=false;btn.classList.remove("on");btn.textContent="🎤 बोलिए";if(box.value.trim()&&box.value.trim()!==before.trim())doParse()};
+  try{rec.start()}catch(e){toast("माइक शुरू नहीं हुआ")}
+}
+
 /* ---------- सुझाव: बिना इंटरनेट ---------- */
 function advice(){
   const k=$("mSel").value||today().slice(0,7);const st=monthStats(k);const ap=num(S.settings.adPer);const np=num(S.settings.nextPrice);
@@ -218,9 +240,10 @@ function advice(){
   if(!st.orders){pts.push("इस महीने अभी कोई बिक्री नहीं जुड़ी। रोज़ की बिक्री डालते रहिए, तब सुझाव बनेंगे।")}
   else{
     pts.push(`${niceMonth(k)} में ${st.orders} ऑर्डर से ${rs(st.rev)} की बिक्री हुई और ${rs(st.profit)} बचे, यानी हर ऑर्डर पर लगभग ${rs(st.profit/st.orders)}।`);
-    const parts=[["पैक की लागत (माल, पैकिंग, कूरियर)",st.cost],["Ads",st.adsEst],["दूसरे खर्च",st.other]].sort((a,b)=>b[1]-a[1]);
+    const parts=[["पैक की लागत (माल, पैकिंग, कूरियर)",st.cost],["Ads",st.adsUsed],["दूसरे खर्च",st.other]].sort((a,b)=>b[1]-a[1]);
     pts.push(`सबसे बड़ा खर्च: ${parts[0][0]}, ${rs(parts[0][1])} (बिक्री का ${Math.round(parts[0][1]/st.rev*100)}%)।`);
-    if(st.adsDep>0){const real=st.adsDep/st.orders;pts.push(`इस महीने Ads में ${rs(st.adsDep)} डाले, जो ${st.orders} ऑर्डर पर ${rs(real)} प्रति ऑर्डर बैठता है। आपका अंदाज़ा ₹${ap} है${real>ap*1.2?"। अगर ये पूरा पैसा खर्च हो चुका है तो Ads अंदाज़े से महँगे पड़ रहे हैं; अगर वॉलेट में बचा है तो Amazon में असली खर्च देखकर मिलाइए।":real<ap*0.8?", यानी Ads अंदाज़े से सस्ते पड़ रहे हैं (वॉलेट में पैसा बचा भी हो सकता है)।":", यानी अंदाज़ा ठीक चल रहा है।"}`)}
+    if(st.adsReal>0){const real=st.adsReal/st.orders;pts.push(`Ads का असली खर्च ${rs(st.adsReal)} रहा, यानी हर ऑर्डर पर ${rs(real)}। आपका अंदाज़ा ₹${ap} था${real>ap*1.2?"। Ads अंदाज़े से महँगे पड़ रहे हैं: जो keyword बिना बिक्री के पैसे खा रहे हैं उन्हें बंद करें या bid घटाएँ।":real<ap*0.8?"। Ads अंदाज़े से सस्ते पड़ रहे हैं।":"। अंदाज़ा ठीक है।"}`)}
+    else if(st.adsDep>0){const real=st.adsDep/st.orders;pts.push(`इस महीने Ads में ${rs(st.adsDep)} डाले, जो ${st.orders} ऑर्डर पर ${rs(real)} प्रति ऑर्डर बैठता है। आपका अंदाज़ा ₹${ap} है${real>ap*1.2?"। अगर ये पूरा पैसा खर्च हो चुका है तो Ads अंदाज़े से महँगे पड़ रहे हैं; अगर वॉलेट में बचा है तो Amazon में असली खर्च देखकर मिलाइए।":real<ap*0.8?", यानी Ads अंदाज़े से सस्ते पड़ रहे हैं (वॉलेट में पैसा बचा भी हो सकता है)।":", यानी अंदाज़ा ठीक चल रहा है।"}`)}
   }
   S.settings.products.forEach(p=>{if(np&&np!==num(p.price)){const c=pcost(p);pts.push(`${p.name}: दाम ₹${np} करने पर Ads वाले ऑर्डर पर ${rs(np-c-ap)} और ऑर्गेनिक पर ${rs(np-c)} बचेंगे (अभी ₹${num(p.price)} पर ${rs(num(p.price)-c-ap)} / ${rs(num(p.price)-c)})।`)}
     if(num(p.fee)===0)pts.push(`${p.name}: "Amazon कमीशन" अभी ₹0 है। अगर Amazon referral/closing फीस अलग से काटता है तो सेटअप में डालिए, वरना मुनाफ़ा ज़्यादा दिखेगा।`)});
@@ -250,6 +273,8 @@ document.addEventListener("click",ev=>{
   const b=ev.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
   if(a==="qty"){const q=$("sQty");q.value=Math.max(1,(parseInt(q.value)||1)+parseInt(b.dataset.d));return}
   if(a==="aiSave")return doSave();
+  if(a==="recalc"){const p=S.settings.products.find(x=>x.id===b.dataset.id);if(!p)return;const c=pcost(p);let n=0;Object.values(S.months).forEach(m=>m.sales.forEach(s=>{if(s.pid===p.id){s.cost=c;s.name=p.name;n++}}));saveSettings();toast(n+" एंट्री नई लागत ₹"+c+" से अपडेट हुईं");return}
+  if(a==="mic")return startMic();
   if(a==="aiCancel"){pending=null;$("aiOut").innerHTML="";return}
   if(a==="del"||a==="delLoan"||a==="delProd"){
     const key=a+b.dataset.id;
@@ -299,9 +324,20 @@ $("dlBackup").addEventListener("click",()=>{download("bihar-swad-hisaab-"+today(
 $("cpBackup").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(JSON.stringify(S));S.settings.lastBackup=Date.now();saveSettings();toast("बैकअप कॉपी हो गया, कहीं सेव कर लें")}catch(e){toast("कॉपी नहीं हो पाया")}});
 $("imp").addEventListener("change",async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{const d=JSON.parse(await f.text());if(!d||!d.settings||!Array.isArray(d.settings.products))throw 0;
-    S={settings:Object.assign(clone(DEFAULT_SETTINGS),d.settings),months:d.months||{}};
-    $("prodList").innerHTML="";saveSettings();toast("बैकअप वापस आ गया");
+  try{const d=JSON.parse(await f.text());
+    if(d&&d.type==="merge"){ // Amazon/दूसरे डेटा को जोड़ो, पुराना कुछ नहीं हटेगा
+      let ns=0,ne=0,np=0;
+      (d.products||[]).forEach(p=>{const ex=S.settings.products.find(x=>x.id===p.id);if(ex)Object.assign(ex,p);else{S.settings.products.push(p);np++}});
+      Object.keys(d.months||{}).forEach(k=>{const m=month(k),src=d.months[k];const have=new Set([...m.sales,...m.exp].map(x=>x.id));
+        (src.sales||[]).forEach(x=>{if(!have.has(x.id)){m.sales.push(x);ns++}else{const i=m.sales.findIndex(y=>y.id===x.id);m.sales[i]=x}});
+        (src.exp||[]).forEach(x=>{if(!have.has(x.id)){m.exp.push(x);ne++}else{const i=m.exp.findIndex(y=>y.id===x.id);m.exp[i]=x}})});
+      if(d.settings)Object.assign(S.settings,d.settings);
+      $("prodList").innerHTML="";saveSettings();toast(`जुड़ गया: ${ns} बिक्री, ${ne} खर्च, ${np} नए पैक`);
+    }else{
+      if(!d||!d.settings||!Array.isArray(d.settings.products))throw 0;
+      S={settings:Object.assign(clone(DEFAULT_SETTINGS),d.settings),months:d.months||{}};
+      $("prodList").innerHTML="";saveSettings();toast("बैकअप वापस आ गया");
+    }
   }catch(err){toast("ये बैकअप फ़ाइल सही नहीं लगी")}
   e.target.value="";
 });
@@ -313,6 +349,9 @@ $("mSel").value=today().slice(0,7);
 setTab(location.hash.slice(1)||"today");
 render();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-if("serviceWorker" in navigator&&location.protocol.startsWith("http")){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
+  let hadCtrl=!!navigator.serviceWorker.controller,reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(hadCtrl&&!reloaded){reloaded=true;location.reload()}});
+  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{})})}
 window.__parse=parseEntry;
 })();

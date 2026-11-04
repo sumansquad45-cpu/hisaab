@@ -84,6 +84,7 @@ button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 14p
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button{color:#0f1a12}}
 button.ghost{background:transparent;color:var(--leaf);border:1px solid var(--line)}
 button.gud{background:var(--gud);}
+#micBtn.on{background:var(--bad)}
 button.del{background:transparent;color:var(--bad);padding:6px 8px;font-size:.85rem;font-weight:600}
 button.del.sure{background:var(--bad);color:#fff}
 button:disabled{opacity:.55;cursor:wait}
@@ -150,8 +151,8 @@ nav.tabs a.on{background:var(--leaf-soft);color:var(--leaf)}
     <div class="card ai" id="aiCard">
       <h2>बोलकर या लिखकर बताइए</h2>
       <textarea id="aiText" placeholder="जैसे: आज 250g वाले 6 बिके, 2 वेबसाइट से। Ads में 10000 डाले।"></textarea>
-      <p class="note">कीबोर्ड का माइक दबाकर बोलिए। ऐप बिना इंटरनेट के समझकर एंट्री बनाएगा, सेव करने से पहले आप देख लेंगे। हर पैक का "बोलने वाला नाम" सेटअप में है।</p>
-      <button id="aiGo">समझकर एंट्री बनाओ</button>
+      <p class="note">"🎤 बोलिए" दबाकर हिंदी में बोलिए (बोलकर लिखने के लिए इंटरनेट चाहिए), या टाइप कीजिए। सेव करने से पहले आप एंट्री देख लेंगे। जैसे: "250g के 5 और पैक ऑफ 2 के 2 बिके"। हर पैक के बोलने वाले नाम सेटअप में हैं।</p>
+      <div class="row"><button type="button" class="gud" id="micBtn" data-act="mic" style="flex:1 1 140px">🎤 बोलिए</button><button id="aiGo" style="flex:1 1 140px">समझकर एंट्री बनाओ</button></div>
       <div id="aiOut"></div>
     </div>
 
@@ -161,8 +162,8 @@ nav.tabs a.on{background:var(--leaf-soft);color:var(--leaf)}
         <label class="f" for="sDate">तारीख<input type="date" id="sDate"></label>
         <label class="f" for="sChan">कहाँ से
           <select id="sChan">
-            <option value="amazon_fba">Amazon FBA</option>
             <option value="easy_ship">Amazon Easy Ship</option>
+            <option value="amazon_fba">Amazon FBA</option>
             <option value="website">वेबसाइट</option>
           </select>
         </label>
@@ -183,7 +184,8 @@ nav.tabs a.on{background:var(--leaf-soft);color:var(--leaf)}
       <div class="row">
         <label class="f" for="eKind">किस चीज़ का
           <select id="eKind">
-            <option value="ads">Ads में पैसा डाला</option>
+            <option value="ads">Ads वॉलेट में पैसा डाला</option>
+            <option value="adspend">Ads का असली खर्च (Amazon से देखकर)</option>
             <option value="other">दूसरा खर्च</option>
           </select>
         </label>
@@ -274,7 +276,7 @@ nav.tabs a.on{background:var(--leaf-soft);color:var(--leaf)}
       <div class="row">
         <button class="ghost" id="dlBackup">बैकअप फ़ाइल डाउनलोड करें</button>
         <button class="ghost" id="cpBackup">बैकअप कॉपी करें</button>
-        <label class="f" for="imp" style="min-width:160px">बैकअप से वापस लाएँ<input type="file" id="imp" accept="application/json,.json"></label>
+        <label class="f" for="imp" style="min-width:160px">बैकअप / Amazon डेटा फ़ाइल जोड़ें<input type="file" id="imp" accept="application/json,.json"></label>
       </div>
       <p class="note" id="storeNote"></p>
     </div>
