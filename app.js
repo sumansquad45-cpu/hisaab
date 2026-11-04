@@ -4,6 +4,7 @@ const LS_KEY="biharswad-hisaab-v1";
 const CH={amazon_fba:"Amazon FBA",easy_ship:"Easy Ship",website:"वेबसाइट"};
 const DEFAULT_SETTINGS={adPer:60,nextPrice:289,lastBackup:0,products:[
   {id:"p250",name:"ठेकुआ 250g (Pack of 1)",code:"250g, सिंगल, single, पैक ऑफ 1, pack of 1",price:260,raw:57,pouch:18,box:10,tape:2,courier:68,fee:0},
+  {id:"p250fba",name:"ठेकुआ 250g FBA",code:"fba 250g, 250g fba, एफबीए 250g, fba, एफबीए",price:259,raw:57,pouch:18,box:0,tape:0,courier:0,fee:0,channel:"amazon_fba",fbaOf:"p250"},
   {id:"p2",name:"ठेकुआ 500g (Pack of 2)",code:"500g, 500 ग्राम, आधा किलो, पैक ऑफ 2, pack of 2, 2 वाला, डबल, double",price:449,raw:114,pouch:36,box:10,tape:2,courier:88,fee:0},
   {id:"p3",name:"ठेकुआ 750g (Pack of 3)",code:"750g, 750 ग्राम, पैक ऑफ 3, pack of 3, 3 वाला",price:699,raw:171,pouch:54,box:10,tape:2,courier:133,fee:0}
  ],loans:[]};
@@ -59,7 +60,7 @@ function wallet(){let dep=0,used=0;Object.keys(S.months).forEach(k=>{const m=S.m
 function addSale(date,pid,qty,channel){
   const p=S.settings.products.find(x=>x.id===pid);if(!p||!(qty>0))return false;
   const k=date.slice(0,7);
-  month(k).sales.push({id:uid(),date,pid,name:p.name,qty:Math.round(qty),price:num(p.price),cost:pcost(p),adPer:num(S.settings.adPer),channel:CH[channel]?channel:"amazon_fba",at:Date.now()});
+  month(k).sales.push({id:uid(),date,pid,name:p.name,qty:Math.round(qty),price:num(p.price),cost:pcost(p),adPer:num(S.settings.adPer),channel:p.channel||(CH[channel]?channel:"easy_ship"),at:Date.now()});
   return k;
 }
 function addExp(date,kind,amount,note){
@@ -197,7 +198,9 @@ function parseEntry(text){
     if(!qn.length&&chOf(seg)&&sales.length){sales[sales.length-1].channel=chOf(seg);return}
     if(!qn.length){if(/(बिक|बिके|बिका|sold|bika|bike|order|ऑर्डर|आर्डर)/.test(seg)||hit&&prods.length)unclear.push(seg);return}
     if(!hit){unclear.push(seg);return}
-    const channel=chOf(seg)||$("sChan").value||"easy_ship";
+    let channel=chOf(seg)||hit.p.channel||$("sChan").value||"easy_ship";
+    if(channel==="amazon_fba"&&!hit.p.channel){const f=S.settings.products.find(x=>x.fbaOf===hit.p.id);if(f)hit={p:f}}
+    if(hit.p.channel)channel=hit.p.channel;
     sales.push({pid:hit.p.id,qty:qn[0],channel,date});
   });
   return {sales,exps,unclear};
