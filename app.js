@@ -4,7 +4,7 @@ const LS_KEY="biharswad-hisaab-v1";
 const CH={amazon_fba:"Amazon FBA",easy_ship:"Easy Ship",website:"वेबसाइट"};
 const DEFAULT_SETTINGS={adPer:60,nextPrice:289,lastBackup:0,products:[
   {id:"p250",name:"ठेकुआ 250g (Pack of 1)",code:"250g, सिंगल, single, पैक ऑफ 1, pack of 1",price:260,raw:57,pouch:18,box:10,tape:2,courier:68,fee:0},
-  {id:"p250fba",name:"ठेकुआ 250g FBA",code:"fba 250g, 250g fba, एफबीए 250g, fba, एफबीए",price:259,raw:57,pouch:18,box:0,tape:0,courier:0,fee:0,channel:"amazon_fba",fbaOf:"p250"},
+  {id:"p250fba",name:"ठेकुआ 250g FBA",code:"fba 250g, 250g fba, एफबीए 250g, fba, एफबीए",price:259,raw:57,pouch:18,box:0,tape:0,courier:5,fee:0,channel:"amazon_fba",fbaOf:"p250"},
   {id:"p2",name:"ठेकुआ 500g (Pack of 2)",code:"500g, 500 ग्राम, आधा किलो, पैक ऑफ 2, pack of 2, 2 वाला, डबल, double",price:449,raw:114,pouch:36,box:10,tape:2,courier:88,fee:0},
   {id:"p3",name:"ठेकुआ 750g (Pack of 3)",code:"750g, 750 ग्राम, पैक ऑफ 3, pack of 3, 3 वाला",price:699,raw:171,pouch:54,box:10,tape:2,courier:133,fee:0}
  ],loans:[]};
@@ -51,7 +51,9 @@ function dayStats(d){
   // Ads का असली खर्च पूरे महीने का एक साथ डाला जाता है, इसलिए दिन के हिसाब में उसे ऑर्डर के अनुपात में बाँटो
   const m=S.months[d.slice(0,7)]||{sales:[],exp:[]};const ms=stats(m.sales,m.exp);
   const st=stats(m.sales.filter(s=>s.date===d),m.exp.filter(e=>e.date===d&&e.kind!=="adspend"));
-  if(ms.adsReal>0&&ms.orders){st.adsUsed=st.orders*ms.adsReal/ms.orders;st.profit=st.rev-st.cost-st.adsUsed-st.other}
+  const daily=m.exp.some(e=>e.kind==="adspend"&&e.daily);
+  if(daily){const a=m.exp.filter(e=>e.kind==="adspend"&&e.date===d).reduce((x,e)=>x+e.amount,0);st.adsReal=a;st.adsUsed=a;st.profit=st.rev-st.cost-a-st.other}
+  else if(ms.adsReal>0&&ms.orders){st.adsUsed=st.orders*ms.adsReal/ms.orders;st.profit=st.rev-st.cost-st.adsUsed-st.other}
   return st}
 function monthStats(k){const m=S.months[k]||{sales:[],exp:[]};return stats(m.sales,m.exp)}
 function wallet(){let dep=0,used=0;Object.keys(S.months).forEach(k=>{const m=S.months[k];m.exp.forEach(e=>{if(e.kind==="ads")dep+=e.amount});used+=stats(m.sales,m.exp).adsUsed});return {dep,used,left:dep-used}}
@@ -84,7 +86,7 @@ function renderProducts(){
 function renderToday(){
   const d=$("viewDate").value||today();
   const st=dayStats(d);const isToday=d===today();
-  $("todayTiles").innerHTML=tile(isToday?"आज ऑर्डर":"ऑर्डर",st.orders)+tile("बिक्री",rs(st.rev))+tile("मुनाफ़ा*",`<span class="${st.profit<0?"neg":""}">${rs(st.profit)}</span>`);
+  $("todayTiles").innerHTML=tile(isToday?"आज ऑर्डर":"ऑर्डर",st.orders)+tile("बिक्री",rs(st.rev))+tile("मुनाफ़ा*",`<span class="${st.profit<0?"neg":""}">${rs(st.profit)}</span>`)+`<p class="note" style="grid-column:1/-1;margin:0">Ads खर्च इस दिन: ${rs(st.adsUsed)}${st.orders?" · प्रति ऑर्डर "+rs(st.adsUsed/st.orders):""}</p>`;
   $("dayTitle").textContent=isToday?"आज की एंट्री":niceDate(d)+" की एंट्री";
   const k=d.slice(0,7),m=S.months[k]||{sales:[],exp:[]};
   const rows=[...m.sales.filter(s=>s.date===d).map(s=>({t:"s",o:s})),...m.exp.filter(e=>e.date===d).map(e=>({t:"e",o:e}))].sort((a,b)=>b.o.at-a.o.at);
