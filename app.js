@@ -32,6 +32,11 @@ function loadLocal(){
   try{const r=localStorage.getItem(LS_KEY);if(r){const d=JSON.parse(r);if(d&&d.settings){S=d;S.months=S.months||{};}}}catch(e){}
   S.settings=Object.assign(clone(DEFAULT_SETTINGS),S.settings);
   S.settings.products.forEach(p=>{if(p.code==null)p.code=""});
+  // सफ़ाई: किसी महीने में रोज़ का Ads खर्च आ गया हो तो उसी महीने की पुरानी "पूरे महीने" वाली Ads एंट्री हटाओ (डबल गिनती न हो)
+  let fixed=false;
+  Object.keys(S.months||{}).forEach(k=>{const m=S.months[k];if(!m||!Array.isArray(m.exp))return;
+    if(m.exp.some(e=>e.kind==="adspend"&&e.daily)){const n=m.exp.length;m.exp=m.exp.filter(e=>!(e.kind==="adspend"&&!e.daily&&String(e.id).startsWith("amz-ads-")));if(m.exp.length!==n)fixed=true}});
+  if(fixed)saveLocal();
 }
 function saveLocal(){try{localStorage.setItem(LS_KEY,JSON.stringify(S))}catch(e){toast("फोन में जगह नहीं बची, बैकअप लेकर पुराना डेटा हटाएँ")}}
 function saveSettings(){saveLocal();render()}
