@@ -337,6 +337,7 @@ $("imp").addEventListener("change",async e=>{
   try{const d=JSON.parse(await f.text());
     if(d&&d.type==="merge"){ // Amazon/दूसरे डेटा को जोड़ो, पुराना कुछ नहीं हटेगा
       let ns=0,ne=0,np=0;
+      const rm=new Set(d.remove||[]);if(rm.size)Object.values(S.months).forEach(m=>{m.sales=m.sales.filter(x=>!rm.has(x.id));m.exp=m.exp.filter(x=>!rm.has(x.id))});
       (d.products||[]).forEach(p=>{const ex=S.settings.products.find(x=>x.id===p.id);if(ex)Object.assign(ex,p);else{S.settings.products.push(p);np++}});
       Object.keys(d.months||{}).forEach(k=>{const m=month(k),src=d.months[k];const have=new Set([...m.sales,...m.exp].map(x=>x.id));
         (src.sales||[]).forEach(x=>{if(!have.has(x.id)){m.sales.push(x);ns++}else{const i=m.sales.findIndex(y=>y.id===x.id);m.sales[i]=x}});
