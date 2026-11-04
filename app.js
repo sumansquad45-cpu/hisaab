@@ -46,7 +46,12 @@ function stats(sales,exp){
   const adsUsed=adsReal>0?adsReal:adsEst;
   return {orders,rev,cost,adsEst,adsDep,adsReal,adsUsed,other,profit:rev-cost-adsUsed-other,profitDep:rev-cost-adsDep-other};
 }
-function dayStats(d){const m=S.months[d.slice(0,7)]||{sales:[],exp:[]};return stats(m.sales.filter(s=>s.date===d),m.exp.filter(e=>e.date===d))}
+function dayStats(d){
+  // Ads का असली खर्च पूरे महीने का एक साथ डाला जाता है, इसलिए दिन के हिसाब में उसे ऑर्डर के अनुपात में बाँटो
+  const m=S.months[d.slice(0,7)]||{sales:[],exp:[]};const ms=stats(m.sales,m.exp);
+  const st=stats(m.sales.filter(s=>s.date===d),m.exp.filter(e=>e.date===d&&e.kind!=="adspend"));
+  if(ms.adsReal>0&&ms.orders){st.adsUsed=st.orders*ms.adsReal/ms.orders;st.profit=st.rev-st.cost-st.adsUsed-st.other}
+  return st}
 function monthStats(k){const m=S.months[k]||{sales:[],exp:[]};return stats(m.sales,m.exp)}
 function wallet(){let dep=0,used=0;Object.keys(S.months).forEach(k=>{const m=S.months[k];m.exp.forEach(e=>{if(e.kind==="ads")dep+=e.amount});used+=stats(m.sales,m.exp).adsUsed});return {dep,used,left:dep-used}}
 
