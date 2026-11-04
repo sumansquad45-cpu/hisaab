@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bihar Swad हिसाब</title>
+<meta name="theme-color" content="#2d6a3a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: one-column phone ledger — summary tiles first, then entry, then detail; tab bar fixed at bottom */
+  --bg:#f3f4ee;
+  --surface:#ffffff;
+  --ink:#1d2620;
+  --muted:#5f6b60;
+  --line:#dfe2d6;
+  --leaf:#2d6a3a;
+  --leaf-soft:#e3eee1;
+  --gud:#9a5a17;
+  --gud-soft:#f5e9d8;
+  --good:#2d6a3a;
+  --bad:#b0352b;
+  --bad-soft:#f7e2df;
+  --font-display:"Mukta","Noto Sans Devanagari",system-ui,sans-serif;
+  --font-body:"Mukta","Noto Sans Devanagari",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121612; --surface:#1b211c; --ink:#e8ece4; --muted:#9aa697; --line:#2e372f;
+    --leaf:#7cc28a; --leaf-soft:#22362a; --gud:#e0a35a; --gud-soft:#3a2c1b;
+    --good:#7cc28a; --bad:#f08a7e; --bad-soft:#3d2422; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121612; --surface:#1b211c; --ink:#e8ece4; --muted:#9aa697; --line:#2e372f;
+  --leaf:#7cc28a; --leaf-soft:#22362a; --gud:#e0a35a; --gud-soft:#3a2c1b;
+  --good:#7cc28a; --bad:#f08a7e; --bad-soft:#3d2422; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.45}
+body{padding-bottom:84px}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px}
+header{padding:18px 0 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--font-display);font-size:1.45rem;font-weight:800;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 small{display:block;font-size:.85rem;font-weight:500;color:var(--muted)}
+h2{font-size:1.05rem;font-weight:700;margin:0;text-wrap:balance}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--leaf-soft);color:var(--leaf)}
+.chip.local{background:var(--gud-soft);color:var(--gud)}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+section.view{display:none;flex-direction:column;gap:14px;padding-bottom:12px}
+section.view.on{display:flex}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.card.ai{border-color:var(--leaf);}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tiles.two{grid-template-columns:repeat(2,1fr)}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .k{font-size:.78rem;color:var(--muted);font-weight:500}
+.tile .v{font-size:1.25rem;font-weight:800;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.tile.hero{grid-column:1/-1;background:var(--leaf);border-color:var(--leaf);color:#fff}
+.tile.hero .k{color:rgba(255,255,255,.85)}
+.tile.hero .v{font-size:1.8rem}
+:root[data-theme="dark"] .tile.hero{color:#0f1a12}
+:root[data-theme="dark"] .tile.hero .k{color:rgba(15,26,18,.75)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tile.hero{color:#0f1a12}:root:not([data-theme="light"]) .tile.hero .k{color:rgba(15,26,18,.75)}}
+.tile.hero.loss{background:var(--bad);border-color:var(--bad)}
+.neg{color:var(--bad)}
+.pos{color:var(--good)}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.row > .f{flex:1 1 120px;min-width:0}
+label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:1rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:76px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--leaf);outline-offset:2px}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 14px;cursor:pointer;background:var(--leaf);color:#fff}
+:root[data-theme="dark"] button{color:#0f1a12}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) button{color:#0f1a12}}
+button.ghost{background:transparent;color:var(--leaf);border:1px solid var(--line)}
+button.gud{background:var(--gud);}
+button.del{background:transparent;color:var(--bad);padding:6px 8px;font-size:.85rem;font-weight:600}
+button.del.sure{background:var(--bad);color:#fff}
+button:disabled{opacity:.55;cursor:wait}
+.qty{display:flex;align-items:stretch;gap:6px}
+.qty button{padding:0 14px;font-size:1.2rem}
+.qty input{text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .main{flex:1;min-width:0}
+.item .t{font-weight:600;overflow-wrap:anywhere}
+.item .s{font-size:.8rem;color:var(--muted)}
+.item .amt{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--leaf-soft);color:var(--leaf);margin-right:4px}
+.tag.ads{background:var(--gud-soft);color:var(--gud)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+.empty{color:var(--muted);font-size:.92rem;padding:6px 0}
+.math{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-variant-numeric:tabular-nums;font-size:.92rem}
+.math .tot{font-weight:800;border-top:1px solid var(--line);padding-top:4px}
+.math span:nth-child(even){text-align:right}
+.bars{display:flex;align-items:flex-end;gap:2px;height:92px;padding-top:14px;border-bottom:1px solid var(--line);position:relative}
+.bar{flex:1;background:var(--leaf);border-radius:3px 3px 0 0;min-height:0;opacity:.85}
+.bar.zero{background:var(--line);height:2px!important;opacity:1}
+.bar.today{background:var(--gud);opacity:1}
+.bars-axis{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.bars .maxl{position:absolute;top:0;left:0;font-size:.72rem;color:var(--muted)}
+details summary{cursor:pointer;font-weight:700;list-style:none}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:" +";color:var(--muted)}
+details[open] summary::after{content:" −"}
+.advice{white-space:pre-wrap;font-size:.95rem;background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--line)}
+.preview{background:var(--leaf-soft);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+.note{font-size:.82rem;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{padding:7px 4px;text-align:right;border-top:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+th{font-size:.75rem;color:var(--muted);font-weight:600;border-top:0}
+.tablewrap{overflow-x:auto}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;max-width:560px;width:100%}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--muted);font-weight:600;font-size:.82rem;padding:6px 0;border-radius:10px}
+nav.tabs a .ic{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums}
+nav.tabs a.on{background:var(--leaf-soft);color:var(--leaf)}
+#toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:10px;font-size:.9rem;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:9}
+#toast.show{opacity:1}
+.prod{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:380px){.grid3{grid-template-columns:repeat(2,1fr)}.tiles{grid-template-columns:repeat(2,1fr)}}
+.top{border-left:4px solid var(--bad);padding-left:10px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bihar Swad हिसाब<small id="hdrDate"></small></h1>
+    <span id="mode" class="chip">ऑफ़लाइन · सिर्फ़ इस फोन में</span>
+  </header>
+
+  <!-- आज -->
+  <section class="view" id="v-today">
+    <div class="tiles" id="todayTiles"></div>
+
+    <div class="card ai" id="aiCard">
+      <h2>बोलकर या लिखकर बताइए</h2>
+      <textarea id="aiText" placeholder="जैसे: आज 250g वाले 6 बिके, 2 वेबसाइट से। Ads में 10000 डाले।"></textarea>
+      <p class="note">कीबोर्ड का माइक दबाकर बोलिए। ऐप बिना इंटरनेट के समझकर एंट्री बनाएगा, सेव करने से पहले आप देख लेंगे। हर पैक का "बोलने वाला नाम" सेटअप में है।</p>
+      <button id="aiGo">समझकर एंट्री बनाओ</button>
+      <div id="aiOut"></div>
+    </div>
+
+    <div class="card">
+      <h2>बिक्री जोड़ें</h2>
+      <div class="row">
+        <label class="f" for="sDate">तारीख<input type="date" id="sDate"></label>
+        <label class="f" for="sChan">कहाँ से
+          <select id="sChan">
+            <option value="amazon_fba">Amazon FBA</option>
+            <option value="easy_ship">Amazon Easy Ship</option>
+            <option value="website">वेबसाइट</option>
+          </select>
+        </label>
+      </div>
+      <label for="sProd">पैक<select id="sProd"></select></label>
+      <label for="sQty">कितने बिके
+        <div class="qty">
+          <button type="button" class="ghost" data-act="qty" data-d="-1" aria-label="एक कम">−</button>
+          <input type="number" id="sQty" value="1" min="1" inputmode="numeric">
+          <button type="button" class="ghost" data-act="qty" data-d="1" aria-label="एक ज़्यादा">+</button>
+        </div>
+      </label>
+      <button id="addSale">बिक्री जोड़ें</button>
+    </div>
+
+    <details class="card" id="expCard">
+      <summary>Ads का पैसा या दूसरा खर्च जोड़ें</summary>
+      <div class="row">
+        <label class="f" for="eKind">किस चीज़ का
+          <select id="eKind">
+            <option value="ads">Ads में पैसा डाला</option>
+            <option value="other">दूसरा खर्च</option>
+          </select>
+        </label>
+        <label class="f" for="eAmt">रकम (₹)<input type="number" id="eAmt" inputmode="numeric" placeholder="10000"></label>
+      </div>
+      <div class="row">
+        <label class="f" for="eDate">तारीख<input type="date" id="eDate"></label>
+        <label class="f" for="eNote">नोट<input type="text" id="eNote" placeholder="जैसे: Amazon ads वॉलेट"></label>
+      </div>
+      <p class="note">"दूसरा खर्च" में वही डालें जो पैक की लागत में पहले से नहीं जुड़ा (जैसे फोटोशूट, एजेंसी, किराया)।</p>
+      <button class="gud" id="addExp">खर्च जोड़ें</button>
+    </details>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 id="dayTitle">आज की एंट्री</h2>
+        <input type="date" id="viewDate" style="width:auto" aria-label="किस दिन की एंट्री देखें">
+      </div>
+      <div class="list" id="dayList"></div>
+    </div>
+  </section>
+
+  <!-- महीना -->
+  <section class="view" id="v-month">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2>महीने का हिसाब</h2>
+      <input type="month" id="mSel" style="width:auto" aria-label="महीना चुनें">
+    </div>
+    <div class="tiles" id="mTiles"></div>
+    <div class="card">
+      <h2>पैसा कहाँ गया</h2>
+      <div class="math" id="mMath"></div>
+      <p class="note" id="mAdsNote"></p>
+    </div>
+    <div class="card">
+      <h2>रोज़ के ऑर्डर</h2>
+      <div><div class="bars" id="mBars"></div><div class="bars-axis" id="mAxis"></div></div>
+    </div>
+    <div class="card">
+      <h2>पैक के हिसाब से</h2>
+      <div class="tablewrap" id="mProd"></div>
+    </div>
+    <div class="card">
+      <h2>रिपोर्ट और सलाह</h2>
+      <div class="row">
+        <button class="ghost" id="copyRep">रिपोर्ट कॉपी करें</button>
+        <button id="askAdv">सुझाव देखें</button>
+      </div>
+      <p class="note">सुझाव सिर्फ़ आपके डाले आँकड़ों से बनते हैं। ज़्यादा गहरी सलाह चाहिए तो रिपोर्ट कॉपी करके Claude या किसी भी AI चैट में चिपका दें। बड़ा फ़ैसला लेने से पहले खुद जाँच लें।</p>
+      <div id="advOut"></div>
+    </div>
+  </section>
+
+  <!-- लोन -->
+  <section class="view" id="v-loans">
+    <h2>लोन</h2>
+    <div class="tiles two" id="lTiles"></div>
+    <div class="card">
+      <div class="list" id="lList"></div>
+    </div>
+    <details class="card">
+      <summary>नया लोन जोड़ें</summary>
+      <label for="lName">नाम<input type="text" id="lName" placeholder="जैसे: Bajaj पर्सनल लोन"></label>
+      <div class="row">
+        <label class="f" for="lAmt">बकाया (₹)<input type="number" id="lAmt" inputmode="numeric"></label>
+        <label class="f" for="lRate">ब्याज % सालाना<input type="number" id="lRate" inputmode="decimal" step="0.1"></label>
+        <label class="f" for="lEmi">EMI (₹)<input type="number" id="lEmi" inputmode="numeric"></label>
+      </div>
+      <button id="addLoan">लोन जोड़ें</button>
+    </details>
+    <p class="note">लिस्ट ब्याज दर के हिसाब से ऊपर से नीचे है। आमतौर पर सबसे ज़्यादा ब्याज वाले लोन में पहले extra पैसा डालने से सबसे ज़्यादा बचत होती है, पर prepayment चार्ज भी देख लें।</p>
+  </section>
+
+  <!-- सेटअप -->
+  <section class="view" id="v-setup">
+    <h2>लागत सेटअप</h2>
+    <div class="card">
+      <div class="row">
+        <label class="f" for="adPer">Ads खर्च प्रति ऑर्डर (₹)<input type="number" id="adPer" inputmode="numeric"></label>
+        <label class="f" for="nextPrice">अगला प्लान दाम (₹)<input type="number" id="nextPrice" inputmode="numeric"></label>
+      </div>
+      <p class="note">दाम या लागत बदलने से पुरानी एंट्री नहीं बदलतीं। हर बिक्री उसी दिन के दाम और लागत से सेव होती है।</p>
+    </div>
+    <div id="prodList" style="display:flex;flex-direction:column;gap:12px"></div>
+    <button class="ghost" id="addProd">+ नया पैक जोड़ें</button>
+    <div class="card">
+      <h2>बैकअप</h2>
+      <div class="row">
+        <button class="ghost" id="dlBackup">बैकअप फ़ाइल डाउनलोड करें</button>
+        <button class="ghost" id="cpBackup">बैकअप कॉपी करें</button>
+        <label class="f" for="imp" style="min-width:160px">बैकअप से वापस लाएँ<input type="file" id="imp" accept="application/json,.json"></label>
+      </div>
+      <p class="note" id="storeNote"></p>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs" aria-label="पेज">
+  <div class="in">
+    <a href="#today" data-tab="today"><span class="ic">आज</span>एंट्री</a>
+    <a href="#month" data-tab="month"><span class="ic">₹</span>महीना</a>
+    <a href="#loans" data-tab="loans"><span class="ic">%</span>लोन</a>
+    <a href="#setup" data-tab="setup"><span class="ic">⚙</span>सेटअप</a>
+  </div>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
